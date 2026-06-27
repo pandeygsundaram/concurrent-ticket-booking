@@ -1,6 +1,16 @@
 # Concurrent Ticket Booking
 
-A cinema seat booking API built in Rust that solves the **double-booking problem** — two users trying to grab the same seat at the same time.
+A full-stack cinema seat booking system that solves the **double-booking problem** — two users trying to grab the same seat at the same time.
+
+## Repo Structure
+
+```
+concurrent-booking/
+├── backend/          # Rust/Axum API server
+└── cinema-mobile/    # React Native (Expo) mobile app
+```
+
+---
 
 ## The Problem
 
@@ -25,14 +35,18 @@ First SET NX wins → 200 OK
 All others fail  → 409 Conflict
 ```
 
-## Stack
+---
+
+## Backend (Rust)
+
+### Stack
 
 - **Rust** — systems language, memory safe, blazing fast
 - **Axum** — async HTTP framework
 - **Redis** — atomic `SET NX` for distributed locking
 - **Tokio** — async runtime
 
-## Architecture
+### Architecture
 
 ```
 HTTP Request
@@ -46,7 +60,7 @@ RedisStore (booking.rs)    ← actual Redis operations
 Redis
 ```
 
-## API
+### API
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -55,9 +69,9 @@ Redis
 | `PUT` | `/movies/{movie_id}/seats/{seat_id}/confirm` | Confirm a held seat |
 | `DELETE` | `/movies/{movie_id}/seats/{seat_id}/release` | Release a held seat |
 
-## How It Works
+### How It Works
 
-### Hold a seat
+#### Hold a seat
 ```bash
 curl -X POST http://localhost:8080/movies/movie1/seats/A1/hold \
   -H "Content-Type: application/json" \
@@ -76,21 +90,21 @@ curl -X POST http://localhost:8080/movies/movie1/seats/A1/hold \
 
 The `id` returned is your `session_id` — use it to confirm or release.
 
-### Confirm
+#### Confirm
 ```bash
 curl -X PUT http://localhost:8080/movies/movie1/seats/A1/confirm \
   -H "Content-Type: application/json" \
   -d '{"session_id": "fde294c3-d94c-47c8-bf78-66380eb28321"}'
 ```
 
-### Release
+#### Release
 ```bash
 curl -X DELETE http://localhost:8080/movies/movie1/seats/A1/release \
   -H "Content-Type: application/json" \
   -d '{"session_id": "fde294c3-d94c-47c8-bf78-66380eb28321"}'
 ```
 
-### Test concurrent booking
+#### Test concurrent booking
 ```bash
 curl -X POST http://localhost:8080/movies/movie1/seats/B1/hold \
   -d '{"user_id": "user1"}' -H "Content-Type: application/json" & \
@@ -99,23 +113,47 @@ curl -X POST http://localhost:8080/movies/movie1/seats/B1/hold \
 ```
 One gets `200`, the other gets `409 seat already booked`.
 
-## Redis Key Design
+### Redis Key Design
 
 ```
 seat:{movie_id}:{seat_id}   → booking_id   (TTL: 120s, removed on confirm)
 session:{session_id}        → seat_key     (TTL: 120s, deleted on confirm/release)
 ```
 
-The session key is a reverse lookup — when the user cancels, the frontend only knows the `session_id`, not which seat key to delete.
-
-## Running Locally
+### Running Locally
 
 ```bash
 # start Redis
 docker run -p 6379:6379 redis:7-alpine
 
 # run the server
-cargo run
+cd backend && cargo run
 ```
 
 Server starts on `http://localhost:8080`.
+
+---
+
+## Mobile App (React Native)
+
+### Stack
+
+- **Expo** + **Expo Router** — file-based navigation
+- **NativeWind** — Tailwind utility classes in React Native
+- **Zustand** — lightweight global state
+- **React Native Reanimated** — smooth animations
+
+### Screens
+
+- Onboarding — animated intro with video background
+- Login — phone/email auth entry
+- Movies — poster carousel for film selection
+- Seats — interactive seat map with real-time hold/confirm via the backend API
+
+### Running Locally
+
+```bash
+cd cinema-mobile
+npm install
+npx expo start
+```
