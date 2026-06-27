@@ -1,0 +1,9 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "types": ["nativewind/types"],
+    "target": "ES2019",
+    "moduleResolution": "bundler"
+  }
+}
